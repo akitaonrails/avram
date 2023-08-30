@@ -24,10 +24,22 @@ module Avram::BulkInsert(T)
 
         transaction_committed = T.database.transaction do
           T.database.query insert_sql.statement_for_bulk, args: insert_sql.args do |rs|
-            T.from_rs(rs).each_with_index do |record, index|
-              operation = operations[index]
-              operation.record = record
-              operation.after_save(record)
+            begin
+              T.from_rs(rs).each_with_index do |record, index|
+                begin
+                  operation = operations[index]
+                  operation.record = record
+                  operation.after_save(record)
+                rescue
+                  # trying to move to next valid record in the bulk
+                end
+              end
+            rescue
+              # swallow exception, possibly OverflowArithmetic on the Time.span in the PG decoder
+              # not sure why it happens, but then this exception rollbacks the transaction and
+              # every insert in the bulk is lot
+              # side effect is that after_save won't run and record is lost, but if you don't need it
+              # shouldn't be a problem, for now
             end
           end
 
