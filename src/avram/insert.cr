@@ -8,6 +8,10 @@ class Avram::Insert
     "insert into #{@table}(#{fields}) values #{values_sql_fragment} returning #{returning}"
   end
 
+  def statement_for_bulk
+    "insert into #{@table}(#{fields}) values #{values_sql_fragment} on conflict do nothing returning #{returning}"
+  end
+
   private def returning : String
     if @column_names.empty?
       "*"

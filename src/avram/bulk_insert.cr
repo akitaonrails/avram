@@ -23,7 +23,7 @@ module Avram::BulkInsert(T)
         insert_sql = Avram::Insert.new(T.table_name, insert_values, T.column_names)
 
         transaction_committed = T.database.transaction do
-          T.database.query insert_sql.statement, args: insert_sql.args do |rs|
+          T.database.query insert_sql.statement_for_bulk, args: insert_sql.args do |rs|
             T.from_rs(rs).each_with_index do |record, index|
               operation = operations[index]
               operation.record = record
