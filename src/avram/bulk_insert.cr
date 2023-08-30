@@ -37,12 +37,20 @@ module Avram::BulkInsert(T)
         if transaction_committed
           operations.each do |operation|
             operation.save_status = OperationStatus::Saved
-            operation.after_commit(operation.record.as(T))
+            if operation.record # the "do nothing" statement will not return anything
+              operation.after_commit(operation.record.as(T))
 
-            Avram::Events::SaveSuccessEvent.publish(
-              operation_class: self.class.name,
-              attributes: operation.generic_attributes
-            )
+              Avram::Events::SaveSuccessEvent.publish(
+                operation_class: self.class.name,
+                attributes: operation.generic_attributes
+              )
+            else
+              operation.mark_as_failed
+              Avram::Events::SaveFailedEvent.publish(
+                operation_class: self.class.name,
+                attributes: operation.generic_attributes
+              )
+            end
           end
 
           true
